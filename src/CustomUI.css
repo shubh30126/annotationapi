@@ -1,0 +1,224 @@
+.container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+}
+
+.pdf-view {
+    width: calc(100% - 350px);
+}
+
+.annotations-container {
+    border-left: 1px solid #333;
+    width: 350px;
+}
+
+.annotation-header {
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid #333;
+}
+
+.annotation-header > div {
+    padding: 5px 15px;
+}
+
+ul {
+    margin: 0 5px;
+    padding: 0;
+}
+
+li * {
+    float: left;
+}
+
+li, h3 {
+    clear: both;
+    list-style: none;
+}
+
+input, button {
+    outline: none;
+}
+
+button {
+    background: none;
+    border: 0px;
+    color: #888;
+    font-size: 14px;
+    font-family: Lato, sans-serif;
+    cursor: pointer;
+    padding: 0px;
+    padding-right: 10px;
+}
+
+button:hover {
+    color: #333;
+}
+
+/* Heading */
+h3 {
+    color: #333;
+    font-weight: 700;
+    font-size: 15px;
+    border-bottom: 1px solid #333;
+    padding: 15px 0 14px;
+    margin: 0;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+textarea {
+    margin-left: 60px;
+    width: 75%;
+    font-size: 14px;
+    line-height: 18px;
+    height: 18px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    font-family: Lato, sans-serif;
+    color: #888;
+}
+
+textarea:focus  {
+    color: #333;
+}
+
+/* Annotation list */
+li {
+    overflow: hidden;
+    margin: 5px 0;
+    padding: 10px 0;
+    width: auto;
+    border: 2px solid #1976d2;
+}
+
+li > input[type="checkbox"] {
+    margin: 0 10px;
+    position: relative;
+    top: 15px;
+}
+
+li > label {
+    font-size: 18px;
+    line-height: 32px;
+    width: 237px;
+    padding: 0 0 0 11px;
+}
+
+li > input[type="text"] {
+    width: 226px;
+}
+
+li > .delete:hover {
+    color: #CF2323;
+}
+
+.selected {
+    border: 2px solid #1976d2;
+}
+
+.unselected {
+    border: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+.user-details {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+}
+
+.user-name {
+    font-weight: bold;
+    padding: 0 10px;
+    font-size: 16px;
+}
+
+.user-name:hover {
+    color: #1976d2;
+}
+
+.time {
+    color: rgba(0,0,0,.4);
+    font-size: 14px;
+}
+
+.user-logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 18px;
+    color: #fff;
+    line-height: 30px;
+    text-align: center;
+    background: #1976d2
+}
+
+.comments {
+    width: 100%;
+    padding-left: 60px;
+    font-size: 16px;
+}
+
+.comments-actions {
+    margin-left: auto;
+    margin-right: 20px;
+    color: #1976d2;
+}
+
+.edit {
+    padding-right: 10px;
+}
+
+.edit:hover {
+    color: black;
+}
+
+.delete:hover {
+    color: black;
+}
+
+.footer {
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    padding: 10px 20px;
+}
+
+.footer button + button {
+    margin-left: 20px;
+}
+
+.tools {
+    margin: 0 !important;
+}
+
+#color {
+    -webkit-appearance: none;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    width: 20px;
+    height: 20px;
+}
+#color::-webkit-color-swatch {
+    border: none;
+    border-radius: 10px;
+    padding: 0;
+}
+#color::-webkit-color-swatch-wrapper {
+    border: none;
+    border-radius: 10px;
+    padding: 0;
+}
+
+.MuiSvgIcon-colorPrimary {
+    color: #1976d2 !important;
+}
+
+.MuiButton-containedPrimary {
+    background-color: #1976d2 !important;
+}
