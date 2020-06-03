@@ -1,11 +1,13 @@
 {
-  "name": "adobe-dc-view-sdk-react-sample",
+  "name": "AnnotationAPIDemo",
   "version": "1.0.0",
   "private": false,
   "license": "See license in license.md",
   "dependencies": {
     "@material-ui/core": "^4.10.1",
     "@material-ui/icons": "^4.9.1",
+    "classnames": "^2.2.6",
+    "clsx": "^1.1.1",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
     "react-icons": "^3.10.0",

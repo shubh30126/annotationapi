@@ -10,6 +10,7 @@ written permission of Adobe.
 */
 
 import React, { Component } from "react";
+import classNames from "classnames";
 import Button from '@material-ui/core/Button';
 import CommentIcon from '@material-ui/icons/Comment';
 import FormatStrikethroughIcon from '@material-ui/icons/FormatStrikethrough';
@@ -24,6 +25,14 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
 import IconButton from '@material-ui/core/IconButton';
 import { getAnnotations, updateAnnotations } from "./AnnotationAPIs";
+import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import Divider from "@material-ui/core/Divider";
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Typography from '@material-ui/core/Typography';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import "./CustomUI.css";
 
 class ListItem extends Component {
     constructor(props) {
@@ -65,7 +74,8 @@ class ListItem extends Component {
         this.deleteAnnotation(this.props.annotation.id);
     };
 
-    listItemOnClick = () => {
+    listItemOnClick = e => {
+        e.stopPropagation();
         this.props.annotationManager.selectAnnotation(this.props.annotation.id)
             .then(() => { })
             .catch(error => {
@@ -122,15 +132,15 @@ class ListItem extends Component {
         var elapsed = current - prevDate;
 
         if (elapsed < msPerMinute) {
-            return Math.round(elapsed / 1000) + ' seconds ago';
+            return 'few seconds ago';
         } else if (elapsed < msPerHour) {
             return Math.round(elapsed / msPerMinute) + ' minutes ago';
         } else if (elapsed < msPerDay) {
             return Math.round(elapsed / msPerHour) + ' hours ago';
         } else if (elapsed < msPerMonth) {
-            return 'approximately ' + Math.round(elapsed / msPerDay) + ' days ago';
+            return Math.round(elapsed / msPerDay) + ' days ago';
         } else {
-            return 'approximately ' + Math.round(elapsed / msPerMonth) + ' months ago';
+            return Math.round(elapsed / msPerMonth) + ' months ago';
         }
     };
 
@@ -147,7 +157,9 @@ class ListItem extends Component {
         return (
             <li
                 id={annotation.id}
-                className={selectedAnnotationId === annotation.id ? "selected" : "unselected"}
+                className={ classNames([ "effect7",
+                    selectedAnnotationId === annotation.id ? "selected" : "unselected"])
+                }
                 onClick={this.listItemOnClick}
             >
                 <div className="user-details">
@@ -172,7 +184,7 @@ class ListItem extends Component {
 
                 {
                     inEditMode ?
-                        <textarea type="text" defaultValue={annotation.bodyValue} onChange={this.editInputOnChange} /> :
+                        <textarea type="text" className="edit-text" defaultValue={annotation.bodyValue} onChange={this.editInputOnChange} /> :
                         <label className="comments">{annotation.bodyValue}</label>
                 }
             </li>
@@ -193,14 +205,27 @@ class CustomRHP extends Component {
         imported: false,
         exporting: false,
         importing: false,
+        page: 0,
     };
 
+    callback= false;
+
     componentDidUpdate(prevProps) {
+        if (this.props.viewSDKClient && this.props.viewSDKClient.adobeDCView && !this.callback) {
+            this.callback = true;
+            this.props.viewSDKClient.adobeDCView.registerCallback(window.AdobeDC.View.Enum.CallbackType.EVENT_LISTENER, event => {
+                if (event.type === "CURRENT_ACTIVE_PAGE" || event.type === "PREVIEW_PAGE_MOUSE_ENTER") {
+                    this.setState({ page: event.data.pageNumber });
+                }
+            }, {
+                enableFilePreviewEvents: true,
+            });
+            window.adobeViewer.getAPIs().then(apis => {
+                this.apis = apis;
+            });
+        }
         if (!prevProps.annotationManager && this.props.annotationManager) {
             this.props.annotationManager.registerEventListener(this.annotationEventListener);
-            setInterval(() => {
-                this.forceUpdate();
-            }, 1000);
         }
     }
 
@@ -214,6 +239,9 @@ class CustomRHP extends Component {
         }
         if (event.type === "ANNOTATION_DELETED") {
             this.onAnnotationDeleted(event.data.id);
+        }
+        if (event.type === "ANNOTATION_MODE_ENDED" && this.state.selectedTool) {
+            this.setState({ selectedTool: "" });
         }
         if (event.type === "ANNOTATION_SELECTED") {
             this.toggleSelectedAnnotation(event.data.id);
@@ -277,27 +305,44 @@ class CustomRHP extends Component {
         }
     };
 
+    onExpandClick = page => {
+        if (page !== this.state.page) {
+            this.setState({ page });
+            this.apis.gotoLocation(page);
+        } else {
+            this.setState({ page: 0 });
+        }
+    };
+
     render() {
         const disabled = !this.props.annotationManager;
+        const page1Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 0));
+        const page2Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 1));
+        const page3Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 2));
+        const page4Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 3));
+        const page5Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 4));
         return (
             <div className="annotations-container">
+                <IconButton onClick={ this.props.handleDrawerClose } className="back">
+                    <ChevronRightIcon fontSize="large" />
+                </IconButton>
                 <div className="annotation-header">
-                    <IconButton disabled={ disabled } className="tools" size="medium" onClick={ e => this.onToolsClick("note")}>
-                        <CommentIcon color={ this.state.selectedTool === "note" ? "primary" : "inherit" } />
+                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("note")}>
+                        <CommentIcon fontSize="small" color={ this.state.selectedTool === "note" ? "primary" : "inherit" } />
                     </IconButton>
-                    <IconButton disabled={ disabled } className="tools" size="medium" onClick={ e => this.onToolsClick("strikeout")}>
-                        <FormatStrikethroughIcon color={ this.state.selectedTool === "strikeout" ? "primary" : "inherit" } />
+                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("strikeout")}>
+                        <FormatStrikethroughIcon fontSize="small" color={ this.state.selectedTool === "strikeout" ? "primary" : "inherit" } />
                     </IconButton>
-                    <IconButton disabled={ disabled } className="tools" style={ this.state.selectedTool === "highlight" ? { color: "#1976d2" } : {}} size="medium" onClick={ e => this.onToolsClick("highlight")}>
-                        <FaHighlighter size={19} />
+                    <IconButton disabled={ disabled } className="tools" style={ this.state.selectedTool === "highlight" ? { color: "#1976d2" } : {}} onClick={ e => this.onToolsClick("highlight")}>
+                        <FaHighlighter size={17} />
                     </IconButton>
-                    <IconButton disabled={ disabled } className="tools" size="medium" onClick={ e => this.onToolsClick("underline")}>
-                        <FormatUnderlinedIcon color={ this.state.selectedTool === "underline" ? "primary" : "inherit" } />
+                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("underline")}>
+                        <FormatUnderlinedIcon fontSize="small" color={ this.state.selectedTool === "underline" ? "primary" : "inherit" } />
                     </IconButton>
-                    <IconButton disabled={ disabled } className="tools" size="medium" onClick={ e => this.onToolsClick("shape")}>
-                        <BrushIcon color={ this.state.selectedTool === "shape" ? "primary" : "inherit" } />
+                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("shape")}>
+                        <BrushIcon fontSize="small" color={ this.state.selectedTool === "shape" ? "primary" : "inherit" } />
                     </IconButton>
-                    <IconButton disabled={ disabled } className="tools" size="medium">
+                    <IconButton disabled={ disabled } className="tools">
                         <input
                             ref={ this.colorRef }
                             type="color"
@@ -308,18 +353,141 @@ class CustomRHP extends Component {
                         />
                     </IconButton>
                 </div>
-                <ul id="annotations">
-                    {
-                        this.state.annotationListItems.map(listItem =>
-                            <ListItem
-                                key={listItem.id}
-                                annotation={listItem}
-                                selectedAnnotationId={this.state.selectedAnnotationId}
-                                annotationManager={this.props.annotationManager}
-                            />
-                        )
-                    }
-                </ul>
+                <Divider/>
+                {
+                    !disabled && <React.Fragment>
+                        <ExpansionPanel onClick={ () => this.onExpandClick(1) } expanded={ this.state.page === 1 }>
+                            <ExpansionPanelSummary
+                                expandIcon={<ExpandMoreIcon />}
+                                aria-controls="panel1a-content"
+                                id="panel1a-header"
+                            >
+                                <Typography>Page 1 Comments</Typography>
+                            </ExpansionPanelSummary>
+                            <ExpansionPanelDetails>
+                                {
+                                    page1Comms.length > 0 ? <ul id="annotations">
+                                        {
+                                            page1Comms
+                                                .map(listItem =>
+                                                    <ListItem
+                                                        key={listItem.id}
+                                                        annotation={listItem}
+                                                        selectedAnnotationId={this.state.selectedAnnotationId}
+                                                        annotationManager={this.props.annotationManager}
+                                                    />
+                                                )
+                                        }
+                                    </ul> : <Typography>No comments yet</Typography>
+                                }
+                            </ExpansionPanelDetails>
+                        </ExpansionPanel>
+                        <ExpansionPanel onClick={ () => this.onExpandClick(2) } expanded={ this.state.page === 2 }>
+                            <ExpansionPanelSummary
+                                expandIcon={<ExpandMoreIcon />}
+                                aria-controls="panel1a-content"
+                                id="panel1a-header"
+                            >
+                                <Typography>Page 2 Comments</Typography>
+                            </ExpansionPanelSummary>
+                            <ExpansionPanelDetails>
+                                {
+                                    page2Comms.length > 0 ? <ul id="annotations">
+                                        {
+                                            page2Comms
+                                                .map(listItem =>
+                                                    <ListItem
+                                                        key={listItem.id}
+                                                        annotation={listItem}
+                                                        selectedAnnotationId={this.state.selectedAnnotationId}
+                                                        annotationManager={this.props.annotationManager}
+                                                    />
+                                                )
+                                        }
+                                    </ul> : <Typography>No comments yet</Typography>
+                                }
+                            </ExpansionPanelDetails>
+                        </ExpansionPanel>
+                        <ExpansionPanel onClick={ () => this.onExpandClick(3) } expanded={ this.state.page === 3 }>
+                            <ExpansionPanelSummary
+                                expandIcon={<ExpandMoreIcon />}
+                                aria-controls="panel1a-content"
+                                id="panel1a-header"
+                            >
+                                <Typography>Page 3 Comments</Typography>
+                            </ExpansionPanelSummary>
+                            <ExpansionPanelDetails>
+                                {
+                                    page3Comms.length > 0 ? <ul id="annotations">
+                                        {
+                                            page3Comms
+                                                .map(listItem =>
+                                                    <ListItem
+                                                        key={listItem.id}
+                                                        annotation={listItem}
+                                                        selectedAnnotationId={this.state.selectedAnnotationId}
+                                                        annotationManager={this.props.annotationManager}
+                                                    />
+                                                )
+                                        }
+                                    </ul> : <Typography>No comments yet</Typography>
+                                }
+                            </ExpansionPanelDetails>
+                        </ExpansionPanel>
+                        <ExpansionPanel onClick={ () => this.onExpandClick(4) } expanded={ this.state.page === 4 }>
+                            <ExpansionPanelSummary
+                                expandIcon={<ExpandMoreIcon />}
+                                aria-controls="panel1a-content"
+                                id="panel1a-header"
+                            >
+                                <Typography>Page 4 Comments</Typography>
+                            </ExpansionPanelSummary>
+                            <ExpansionPanelDetails>
+                                {
+                                    page4Comms.length > 0 ? <ul id="annotations">
+                                        {
+                                            page4Comms
+                                                .map(listItem =>
+                                                    <ListItem
+                                                        key={listItem.id}
+                                                        annotation={listItem}
+                                                        selectedAnnotationId={this.state.selectedAnnotationId}
+                                                        annotationManager={this.props.annotationManager}
+                                                    />
+                                                )
+                                        }
+                                    </ul> : <Typography>No comments yet</Typography>
+                                }
+                            </ExpansionPanelDetails>
+                        </ExpansionPanel>
+                        <ExpansionPanel onClick={ () => this.onExpandClick(5) } expanded={ this.state.page === 5 }>
+                            <ExpansionPanelSummary
+                                expandIcon={<ExpandMoreIcon />}
+                                aria-controls="panel1a-content"
+                                id="panel1a-header"
+                            >
+                                <Typography>Page 5 Comments</Typography>
+                            </ExpansionPanelSummary>
+                            <ExpansionPanelDetails>
+                                {
+                                    page5Comms.length > 0 ? <ul id="annotations">
+                                        {
+                                            page5Comms
+                                                .map(listItem =>
+                                                    <ListItem
+                                                        key={listItem.id}
+                                                        annotation={listItem}
+                                                        selectedAnnotationId={this.state.selectedAnnotationId}
+                                                        annotationManager={this.props.annotationManager}
+                                                    />
+                                                )
+                                        }
+                                    </ul> : <Typography>No comments yet</Typography>
+                                }
+                            </ExpansionPanelDetails>
+                        </ExpansionPanel>
+                    </React.Fragment>
+                }
                 <div className="footer">
                     <Button
                         variant="contained"
