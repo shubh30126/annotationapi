@@ -240,8 +240,11 @@ class CustomRHP extends Component {
         if (event.type === "ANNOTATION_DELETED") {
             this.onAnnotationDeleted(event.data.id);
         }
-        if (event.type === "ANNOTATION_MODE_ENDED" && this.state.selectedTool) {
+        if (event.type === "ANNOTATION_MODE_ENDED" && event.data === this.state.selectedTool) {
             this.setState({ selectedTool: "" });
+        }
+        if (event.type === "ANNOTATION_MODE_STARTED" && event.data !== this.state.selectedTool) {
+            this.setState({ selectedTool: event.data });
         }
         if (event.type === "ANNOTATION_SELECTED") {
             this.toggleSelectedAnnotation(event.data.id);
@@ -275,7 +278,7 @@ class CustomRHP extends Component {
 
     addCommentText = annotation => {
         const type = annotation.target.selector.subtype;
-        const comment = prompt("Enter the text associated with " + type, "Added a " + type) || "Added a " + type;
+        const comment = prompt("Add Text", "") || "Added a " + type;
         annotation.bodyValue = comment;
         this.props.annotationManager.updateAnnotation(annotation)
             .then(() => {
