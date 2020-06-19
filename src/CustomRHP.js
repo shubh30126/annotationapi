@@ -32,6 +32,11 @@ import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
 import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import TextField from '@material-ui/core/TextField';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
 import "./CustomUI.css";
 
 class ListItem extends Component {
@@ -206,9 +211,11 @@ class CustomRHP extends Component {
         exporting: false,
         importing: false,
         page: 0,
+        open: false,
     };
 
     callback= false;
+    selectedAnnotation= undefined;
 
     componentDidUpdate(prevProps) {
         if (this.props.viewSDKClient && this.props.viewSDKClient.adobeDCView && !this.callback) {
@@ -234,7 +241,8 @@ class CustomRHP extends Component {
             if (event.data.bodyValue) {
                 this.onAnnotationAdded(event.data);
             } else {
-                this.addCommentText(event.data);
+                this.selectedAnnotation = event.data;
+                this.setState({ open: true });
             }
         }
         if (event.type === "ANNOTATION_DELETED") {
@@ -276,10 +284,12 @@ class CustomRHP extends Component {
         });
     };
 
-    addCommentText = annotation => {
+    addCommentText = () => {
+        const annotation = this.selectedAnnotation;
         const type = annotation.target.selector.subtype;
-        const comment = prompt("Add Text", "") || "Added a " + type;
+        const comment = document.getElementById("name").value || "Added a " + type;
         annotation.bodyValue = comment;
+        this.setState({ open: false });
         this.props.annotationManager.updateAnnotation(annotation)
             .then(() => {
                 console.log("Annotation updated successfully.");
@@ -534,6 +544,23 @@ class CustomRHP extends Component {
                         {  this.state.exporting ? "Saving Comments" : "Export Comments" }
                     </Button>
                 </div>
+                <Dialog open={ this.state.open } onClose={ this.addCommentText } aria-labelledby="form-dialog-title">
+                    <DialogTitle id="form-dialog-title">Add note</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            margin="dense"
+                            id="name"
+                            label="Note"
+                            fullWidth
+                            variant="outlined"
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={this.addCommentText} color="primary">
+                            Submit
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </div>
         );
     }
