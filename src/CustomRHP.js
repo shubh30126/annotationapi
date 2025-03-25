@@ -26,20 +26,157 @@ import EditIcon from '@material-ui/icons/Edit';
 import IconButton from '@material-ui/core/IconButton';
 import { getAnnotations, updateAnnotations } from "./AnnotationAPIs";
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
-import Divider from "@material-ui/core/Divider";
-import ExpansionPanel from '@material-ui/core/ExpansionPanel';
-import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
-import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
-import Typography from '@material-ui/core/Typography';
+import {
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    Typography,
+    TextField,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Divider,
+    Box,
+    Paper,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemSecondaryAction,
+    Tooltip,
+    withStyles
+} from '@material-ui/core';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import TextField from '@material-ui/core/TextField';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
 import "./CustomUI.css";
+import clsx from 'clsx';
 
-class ListItem extends Component {
+const styles = (theme) => ({
+    root: {
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: theme.palette.background.paper,
+    },
+    header: {
+        padding: theme.spacing(2),
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: theme.palette.primary.main,
+        color: theme.palette.primary.contrastText,
+    },
+    title: {
+        fontWeight: 500,
+    },
+    content: {
+        flexGrow: 1,
+        overflow: 'auto',
+        padding: theme.spacing(2),
+    },
+    list: {
+        padding: 0,
+    },
+    listItem: {
+        marginBottom: theme.spacing(1),
+        borderRadius: theme.shape.borderRadius,
+        border: `1px solid ${theme.palette.divider}`,
+        backgroundColor: theme.palette.background.paper,
+        '&:hover': {
+            backgroundColor: theme.palette.action.hover,
+        },
+        '&.selected': {
+            backgroundColor: theme.palette.action.selected,
+        },
+    },
+    selectedItem: {
+        backgroundColor: theme.palette.action.selected,
+        '&:hover': {
+            backgroundColor: theme.palette.action.selected,
+        },
+    },
+    annotationContent: {
+        padding: theme.spacing(2),
+    },
+    annotationMeta: {
+        display: 'flex',
+        alignItems: 'center',
+        color: theme.palette.text.secondary,
+        fontSize: '0.875rem',
+        marginTop: theme.spacing(1),
+    },
+    pageNumber: {
+        marginLeft: 'auto',
+    },
+    actions: {
+        display: 'flex',
+        gap: theme.spacing(1),
+    },
+    noAnnotations: {
+        padding: theme.spacing(4),
+        textAlign: 'center',
+        color: theme.palette.text.secondary,
+    },
+    iconButton: {
+        padding: theme.spacing(1),
+        color: theme.palette.primary.main,
+        '&:hover': {
+            backgroundColor: theme.palette.action.hover,
+        },
+    },
+    toolbar: {
+        padding: theme.spacing(1),
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: theme.spacing(0.5),
+        backgroundColor: theme.palette.background.default,
+        borderRadius: theme.shape.borderRadius,
+        margin: theme.spacing(1),
+    },
+    toolButton: {
+        minWidth: 36,
+        width: 36,
+        height: 36,
+        padding: theme.spacing(1),
+        borderRadius: theme.shape.borderRadius,
+        color: theme.palette.text.secondary,
+        backgroundColor: theme.palette.background.paper,
+        '&:hover': {
+            backgroundColor: theme.palette.action.hover,
+        },
+        '&.selected': {
+            color: theme.palette.primary.main,
+            backgroundColor: theme.palette.primary.light,
+            '&:hover': {
+                backgroundColor: theme.palette.primary.light,
+            },
+        },
+    },
+    toolIcon: {
+        fontSize: 20,
+    },
+    colorPicker: {
+        width: 36,
+        height: 36,
+        padding: 0,
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: theme.shape.borderRadius,
+        cursor: 'pointer',
+        backgroundColor: theme.palette.background.paper,
+        '&::-webkit-color-swatch': {
+            borderRadius: 'inherit',
+            border: 'none',
+        },
+        '&::-webkit-color-swatch-wrapper': {
+            padding: 0,
+        },
+    },
+    annotationCount: {
+        marginLeft: theme.spacing(1),
+        color: theme.palette.text.secondary,
+    },
+});
+
+class AnnotationListItem extends Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -81,11 +218,14 @@ class ListItem extends Component {
 
     listItemOnClick = e => {
         e.stopPropagation();
-        this.props.annotationManager.selectAnnotation(this.props.annotation.id)
-            .then(() => { })
-            .catch(error => {
-                console.log(error);
-            });
+        const annotationManager = this.props.viewSDKClient?.getAnnotationManager();
+        if (annotationManager) {
+            annotationManager.selectAnnotation(this.props.annotation.id)
+                .then(() => { })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
     };
 
     editInputOnChange = e => {
@@ -98,13 +238,16 @@ class ListItem extends Component {
     /* Edit an existing annotation using Annotation API and update the list item as well. */
     editAnnotation = annotation => {
         annotation.bodyValue = this.state.editInputValue;
-        this.props.annotationManager.updateAnnotation(annotation)
-            .then(() => {
-                console.log("Annotation updated successfully.");
-            })
-            .catch(error => {
-                console.log(error);
-            });
+        const annotationManager = this.props.viewSDKClient?.getAnnotationManager();
+        if (annotationManager) {
+            annotationManager.updateAnnotation(annotation)
+                .then(() => {
+                    console.log("Annotation updated successfully.");
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
     };
 
     /* Delete an existing annotation from Annotation API (the same will be removed from list as well) */
@@ -112,13 +255,16 @@ class ListItem extends Component {
         const filter = {
             annotationIds: [annotationId]
         };
-        this.props.annotationManager.deleteAnnotations(filter)
-            .then(() => {
-                console.log("Annotation deleted successfully.");
-            })
-            .catch(error => {
-                console.log(error);
-            });
+        const annotationManager = this.props.viewSDKClient?.getAnnotationManager();
+        if (annotationManager) {
+            annotationManager.deleteAnnotations(filter)
+                .then(() => {
+                    console.log("Annotation deleted successfully.");
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
     };
 
     getInitial = () => {
@@ -198,45 +344,33 @@ class ListItem extends Component {
 }
 
 class CustomRHP extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.colorRef = React.createRef();
+        this.state = {
+            annotationListItems: [],
+            selectedAnnotationId: undefined,
+            selectedTool: "",
+            color: "#fccb00",
+            imported: false,
+            exporting: false,
+            importing: false,
+            page: 0,
+            open: false,
+        };
     }
-    state = {
-        annotationListItems: [],
-        selectedAnnotationId: undefined,
-        selectedTool: "",
-        color: "#fccb00",
-        imported: false,
-        exporting: false,
-        importing: false,
-        page: 0,
-        open: false,
-    };
-
-    callback= false;
-    selectedAnnotation= undefined;
 
     componentDidUpdate(prevProps) {
-        if (this.props.viewSDKClient && this.props.viewSDKClient.adobeDCView && !this.callback) {
-            this.callback = true;
-            this.props.viewSDKClient.adobeDCView.registerCallback(window.AdobeDC.View.Enum.CallbackType.EVENT_LISTENER, event => {
-                if (event.type === "CURRENT_ACTIVE_PAGE" || event.type === "PREVIEW_PAGE_MOUSE_ENTER") {
-                    this.setState({ page: event.data.pageNumber });
-                }
-            }, {
-                enableFilePreviewEvents: true,
+        if (this.props.viewSDKClient?.adobeViewer && !prevProps.viewSDKClient?.adobeViewer) {
+            this.props.viewSDKClient.adobeViewer.getAnnotationManager().then(annotManager => {
+                annotManager.registerEventListener(this.annotationEventListener);
             });
-            window.adobeViewer.getAPIs().then(apis => {
-                this.apis = apis;
-            });
-        }
-        if (!prevProps.annotationManager && this.props.annotationManager) {
-            this.props.annotationManager.registerEventListener(this.annotationEventListener);
         }
     }
 
     annotationEventListener = event => {
+        console.log('Annotation event:', event);
+        
         if (event.type === "ANNOTATION_ADDED") {
             if (event.data.bodyValue) {
                 this.onAnnotationAdded(event.data);
@@ -248,11 +382,23 @@ class CustomRHP extends Component {
         if (event.type === "ANNOTATION_DELETED") {
             this.onAnnotationDeleted(event.data.id);
         }
-        if (event.type === "ANNOTATION_MODE_ENDED" && event.data === this.state.selectedTool) {
+        if (event.type === "ANNOTATION_MODE_ENDED") {
             this.setState({ selectedTool: "" });
         }
-        if (event.type === "ANNOTATION_MODE_STARTED" && event.data !== this.state.selectedTool) {
-            this.setState({ selectedTool: event.data });
+        if (event.type === "ANNOTATION_MODE_STARTED") {
+            // Map the Adobe SDK tool names to our UI tool names
+            const toolMap = {
+                'note': 'STICKY_NOTE',
+                'shape': 'DRAWING',  // Map shape to DRAWING for our UI
+                'highlight': 'HIGHLIGHT',
+                'underline': 'UNDERLINE',
+                'strikeout': 'STRIKEOUT',
+                'freetext': 'FREETEXT',
+                'eraser': 'ERASER'
+            };
+            const toolName = toolMap[event.data] || event.data.toUpperCase();
+            console.log('Setting tool to:', toolName); // Debug log
+            this.setState({ selectedTool: toolName });
         }
         if (event.type === "ANNOTATION_SELECTED") {
             this.toggleSelectedAnnotation(event.data.id);
@@ -260,7 +406,6 @@ class CustomRHP extends Component {
         if (event.type === "ANNOTATION_UNSELECTED") {
             this.toggleSelectedAnnotation();
         }
-        console.log(event);
     };
 
     /* This will add a new annotation list item to list maintained in state */
@@ -290,23 +435,50 @@ class CustomRHP extends Component {
         const comment = document.getElementById("name").value || "Added a " + type;
         annotation.bodyValue = comment;
         this.setState({ open: false });
-        this.props.annotationManager.updateAnnotation(annotation)
-            .then(() => {
-                console.log("Annotation updated successfully.");
-                this.onAnnotationAdded(annotation);
-            })
-            .catch(error => {
-                console.log(error);
-            });
+        const annotationManager = this.props.viewSDKClient?.getAnnotationManager();
+        if (annotationManager) {
+            annotationManager.updateAnnotation(annotation)
+                .then(() => {
+                    console.log("Annotation updated successfully.");
+                    this.onAnnotationAdded(annotation);
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
     };
 
-    onToolsClick = tool => {
-        if (this.state.selectedTool === tool) {
-            this.setState({ selectedTool: "" });
-            this.props.annotationManager.endAnnotationMode();
-        } else {
-            this.setState({ selectedTool: tool });
-            this.props.annotationManager.startAnnotationMode(tool, { defaultColor: this.state.color });
+    handleToolClick = async (toolName) => {
+        const annotationManager = this.props.viewSDKClient?.getAnnotationManager();
+        if (!annotationManager) return;
+
+        // Map the tool names to the correct annotation modes
+        const toolToModeMap = {
+            'STICKY_NOTE': 'note',
+            'HIGHLIGHT': 'highlight',
+            'SHAPE': 'shape',
+            'UNDERLINE': 'underline',
+            'STRIKEOUT': 'strikeout',
+            'FREETEXT': 'freetext',
+            'DRAWING': 'shape',  // Map DRAWING to shape mode
+            'ERASER': 'eraser'
+        };
+
+        try {
+            if (this.state.selectedTool === toolName) {
+                console.log('Ending annotation mode'); // Debug log
+                await annotationManager.endAnnotationMode();
+                // State will be updated via event listener
+            } else {
+                const mode = toolToModeMap[toolName] || toolName.toLowerCase();
+                console.log('Starting annotation mode:', mode); // Debug log
+                await annotationManager.startAnnotationMode(mode, { 
+                    defaultColor: this.state.color 
+                });
+                // State will be updated via event listener
+            }
+        } catch (error) {
+            console.error('Error toggling annotation mode:', error);
         }
     };
 
@@ -314,250 +486,182 @@ class CustomRHP extends Component {
         const color = this.colorRef.current.value;
         this.setState({ color });
         if (this.state.selectedTool) {
-            this.props.annotationManager.startAnnotationMode(this.state.selectedTool, { defaultColor: this.state.color } );
+            const annotationManager = this.props.viewSDKClient?.getAnnotationManager();
+            if (annotationManager) {
+                annotationManager.startAnnotationMode(this.state.selectedTool, { 
+                    defaultColor: color 
+                });
+            }
         }
     };
 
     onExpandClick = page => {
         if (page !== this.state.page) {
             this.setState({ page });
-            this.apis.gotoLocation(page);
+            this.props.viewSDKClient.getAPIs().gotoLocation(page);
         } else {
             this.setState({ page: 0 });
         }
     };
 
+    // Group annotations by page
+    getAnnotationsByPage = () => {
+        const annotationsByPage = {};
+        this.state.annotationListItems.forEach(annotation => {
+            const page = annotation.target?.selector?.node?.page || 1;
+            if (!annotationsByPage[page]) {
+                annotationsByPage[page] = [];
+            }
+            annotationsByPage[page].push(annotation);
+        });
+        return annotationsByPage;
+    };
+
     render() {
-        const disabled = !this.props.annotationManager;
-        const page1Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 0));
-        const page2Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 1));
-        const page3Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 2));
-        const page4Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 3));
-        const page5Comms = this.state.annotationListItems.filter(annot => (annot.target.selector.node.index === 4));
+        const { classes, handleDrawerClose } = this.props;
+        const { annotationListItems, selectedAnnotationId, selectedTool, color, page } = this.state;
+        const annotationsByPage = this.getAnnotationsByPage();
+
         return (
-            <div className="annotations-container">
-                <IconButton onClick={ this.props.handleDrawerClose } className="back">
-                    <ChevronRightIcon fontSize="large" />
-                </IconButton>
-                <div className="annotation-header">
-                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("note")}>
-                        <CommentIcon fontSize="small" color={ this.state.selectedTool === "note" ? "primary" : "inherit" } />
-                    </IconButton>
-                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("strikeout")}>
-                        <FormatStrikethroughIcon fontSize="small" color={ this.state.selectedTool === "strikeout" ? "primary" : "inherit" } />
-                    </IconButton>
-                    <IconButton disabled={ disabled } className="tools" style={ this.state.selectedTool === "highlight" ? { color: "#1976d2" } : {}} onClick={ e => this.onToolsClick("highlight")}>
-                        <FaHighlighter size={17} />
-                    </IconButton>
-                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("underline")}>
-                        <FormatUnderlinedIcon fontSize="small" color={ this.state.selectedTool === "underline" ? "primary" : "inherit" } />
-                    </IconButton>
-                    <IconButton disabled={ disabled } className="tools" onClick={ e => this.onToolsClick("shape")}>
-                        <BrushIcon fontSize="small" color={ this.state.selectedTool === "shape" ? "primary" : "inherit" } />
-                    </IconButton>
-                    <IconButton disabled={ disabled } className="tools">
+            <div className={classes.root}>
+                <Box className={classes.header}>
+                    <Typography variant="h6" className={classes.title}>
+                        Comments
+                    </Typography>
+                    <Tooltip title="Close panel">
+                        <IconButton 
+                            onClick={handleDrawerClose}
+                            size="small"
+                            color="inherit"
+                        >
+                            <ChevronRightIcon />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+                
+                <Divider />
+
+                <div className={classes.toolbar}>
+                    <Tooltip title="Comment">
+                        <IconButton
+                            className={clsx(classes.toolButton, selectedTool === 'STICKY_NOTE' && 'selected')}
+                            onClick={() => this.handleToolClick('STICKY_NOTE')}
+                        >
+                            <CommentIcon className={classes.toolIcon} />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Highlight">
+                        <IconButton
+                            className={clsx(classes.toolButton, selectedTool === 'HIGHLIGHT' && 'selected')}
+                            onClick={() => this.handleToolClick('HIGHLIGHT')}
+                        >
+                            <FaHighlighter className={classes.toolIcon} />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Strikethrough">
+                        <IconButton
+                            className={clsx(classes.toolButton, selectedTool === 'STRIKEOUT' && 'selected')}
+                            onClick={() => this.handleToolClick('STRIKEOUT')}
+                        >
+                            <FormatStrikethroughIcon className={classes.toolIcon} />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Underline">
+                        <IconButton
+                            className={clsx(classes.toolButton, selectedTool === 'UNDERLINE' && 'selected')}
+                            onClick={() => this.handleToolClick('UNDERLINE')}
+                        >
+                            <FormatUnderlinedIcon className={classes.toolIcon} />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Draw">
+                        <IconButton
+                            className={clsx(classes.toolButton, selectedTool === 'DRAWING' && 'selected')}
+                            onClick={() => this.handleToolClick('DRAWING')}
+                        >
+                            <BrushIcon className={classes.toolIcon} />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Color">
                         <input
-                            ref={ this.colorRef }
                             type="color"
-                            id="color"
-                            value={ this.state.color || "#fccb00" }
-                            onChange={ this.onColorChange.bind(this) }
-                            onKeyUp={ this.onColorChange.bind(this) }
+                            ref={this.colorRef}
+                            value={color}
+                            onChange={this.onColorChange}
+                            className={classes.colorPicker}
                         />
-                    </IconButton>
+                    </Tooltip>
                 </div>
-                <Divider/>
-                {
-                    !disabled && <React.Fragment>
-                        <ExpansionPanel onClick={ () => this.onExpandClick(1) } expanded={ this.state.page === 1 }>
-                            <ExpansionPanelSummary
-                                expandIcon={<ExpandMoreIcon />}
-                                aria-controls="panel1a-content"
-                                id="panel1a-header"
-                            >
-                                <Typography>Page 1 Comments</Typography>
-                            </ExpansionPanelSummary>
-                            <ExpansionPanelDetails>
-                                {
-                                    page1Comms.length > 0 ? <ul id="annotations">
-                                        {
-                                            page1Comms
-                                                .map(listItem =>
-                                                    <ListItem
-                                                        key={listItem.id}
-                                                        annotation={listItem}
-                                                        selectedAnnotationId={this.state.selectedAnnotationId}
-                                                        annotationManager={this.props.annotationManager}
-                                                    />
-                                                )
-                                        }
-                                    </ul> : <Typography>No comments yet</Typography>
-                                }
-                            </ExpansionPanelDetails>
-                        </ExpansionPanel>
-                        <ExpansionPanel onClick={ () => this.onExpandClick(2) } expanded={ this.state.page === 2 }>
-                            <ExpansionPanelSummary
-                                expandIcon={<ExpandMoreIcon />}
-                                aria-controls="panel1a-content"
-                                id="panel1a-header"
-                            >
-                                <Typography>Page 2 Comments</Typography>
-                            </ExpansionPanelSummary>
-                            <ExpansionPanelDetails>
-                                {
-                                    page2Comms.length > 0 ? <ul id="annotations">
-                                        {
-                                            page2Comms
-                                                .map(listItem =>
-                                                    <ListItem
-                                                        key={listItem.id}
-                                                        annotation={listItem}
-                                                        selectedAnnotationId={this.state.selectedAnnotationId}
-                                                        annotationManager={this.props.annotationManager}
-                                                    />
-                                                )
-                                        }
-                                    </ul> : <Typography>No comments yet</Typography>
-                                }
-                            </ExpansionPanelDetails>
-                        </ExpansionPanel>
-                        <ExpansionPanel onClick={ () => this.onExpandClick(3) } expanded={ this.state.page === 3 }>
-                            <ExpansionPanelSummary
-                                expandIcon={<ExpandMoreIcon />}
-                                aria-controls="panel1a-content"
-                                id="panel1a-header"
-                            >
-                                <Typography>Page 3 Comments</Typography>
-                            </ExpansionPanelSummary>
-                            <ExpansionPanelDetails>
-                                {
-                                    page3Comms.length > 0 ? <ul id="annotations">
-                                        {
-                                            page3Comms
-                                                .map(listItem =>
-                                                    <ListItem
-                                                        key={listItem.id}
-                                                        annotation={listItem}
-                                                        selectedAnnotationId={this.state.selectedAnnotationId}
-                                                        annotationManager={this.props.annotationManager}
-                                                    />
-                                                )
-                                        }
-                                    </ul> : <Typography>No comments yet</Typography>
-                                }
-                            </ExpansionPanelDetails>
-                        </ExpansionPanel>
-                        <ExpansionPanel onClick={ () => this.onExpandClick(4) } expanded={ this.state.page === 4 }>
-                            <ExpansionPanelSummary
-                                expandIcon={<ExpandMoreIcon />}
-                                aria-controls="panel1a-content"
-                                id="panel1a-header"
-                            >
-                                <Typography>Page 4 Comments</Typography>
-                            </ExpansionPanelSummary>
-                            <ExpansionPanelDetails>
-                                {
-                                    page4Comms.length > 0 ? <ul id="annotations">
-                                        {
-                                            page4Comms
-                                                .map(listItem =>
-                                                    <ListItem
-                                                        key={listItem.id}
-                                                        annotation={listItem}
-                                                        selectedAnnotationId={this.state.selectedAnnotationId}
-                                                        annotationManager={this.props.annotationManager}
-                                                    />
-                                                )
-                                        }
-                                    </ul> : <Typography>No comments yet</Typography>
-                                }
-                            </ExpansionPanelDetails>
-                        </ExpansionPanel>
-                        <ExpansionPanel onClick={ () => this.onExpandClick(5) } expanded={ this.state.page === 5 }>
-                            <ExpansionPanelSummary
-                                expandIcon={<ExpandMoreIcon />}
-                                aria-controls="panel1a-content"
-                                id="panel1a-header"
-                            >
-                                <Typography>Page 5 Comments</Typography>
-                            </ExpansionPanelSummary>
-                            <ExpansionPanelDetails>
-                                {
-                                    page5Comms.length > 0 ? <ul id="annotations">
-                                        {
-                                            page5Comms
-                                                .map(listItem =>
-                                                    <ListItem
-                                                        key={listItem.id}
-                                                        annotation={listItem}
-                                                        selectedAnnotationId={this.state.selectedAnnotationId}
-                                                        annotationManager={this.props.annotationManager}
-                                                    />
-                                                )
-                                        }
-                                    </ul> : <Typography>No comments yet</Typography>
-                                }
-                            </ExpansionPanelDetails>
-                        </ExpansionPanel>
-                    </React.Fragment>
-                }
-                <div className="footer">
-                    <Button
-                        variant="contained"
-                        color={ (disabled || this.state.imported) ? "secondary" : "primary" }
-                        startIcon={ this.state.importing ? <CachedIcon/> : <AiOutlineImport /> }
-                        size="small"
-                        disabled={ disabled || this.state.imported }
-                        onClick={ () => {
-                            this.setState({ importing: true });
-                            getAnnotations()
-                                .then(annots => {
-                                    if (annots) {
-                                        this.props.annotationManager.addAnnotations(annots)
-                                            .then(() => {
-                                                this.setState({ imported: true, importing: false });
-                                            });
-                                    } else {
-                                        this.setState({ imported: true, importing: false });
-                                    }
-                                });
-                        }}
-                    >
-                        {  this.state.importing ? "Fetching Comments" : "Import Comments" }
-                    </Button>
-                    <Button
-                        variant="contained"
-                        color={ (disabled || this.state.exporting) ? "secondary" : "primary" }
-                        size="small"
-                        startIcon={ this.state.exporting ? <CachedIcon/> :  <TiExport />}
-                        disabled={ disabled || this.state.exporting }
-                        onClick={ () => {
-                            this.setState({ exporting: true });
-                            this.props.annotationManager.getAnnotations()
-                                .then(annots => {
-                                    updateAnnotations(annots).then(() => {
-                                        this.setState({ exporting: false });
-                                    })
-                                });
-                        }}
-                    >
-                        {  this.state.exporting ? "Saving Comments" : "Export Comments" }
-                    </Button>
+
+                <Divider />
+                
+                <div className={classes.content}>
+                    {annotationListItems.length > 0 ? (
+                        Object.entries(annotationsByPage).map(([pageNum, annotations]) => (
+                            <React.Fragment key={pageNum}>
+                                <Accordion 
+                                    expanded={page === parseInt(pageNum)}
+                                    onChange={() => this.onExpandClick(parseInt(pageNum))}
+                                >
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                        <Typography>Page {pageNum}</Typography>
+                                        <Typography className={classes.annotationCount}>
+                                            ({annotations.length})
+                                        </Typography>
+                                    </AccordionSummary>
+                                    <AccordionDetails>
+                                        <List className={classes.list}>
+                                            {annotations.map((annotation) => (
+                                                <AnnotationListItem 
+                                                    key={annotation.id}
+                                                    annotation={annotation}
+                                                    selectedAnnotationId={selectedAnnotationId}
+                                                    viewSDKClient={this.props.viewSDKClient}
+                                                />
+                                            ))}
+                                        </List>
+                                    </AccordionDetails>
+                                </Accordion>
+                            </React.Fragment>
+                        ))
+                    ) : (
+                        <div className={classes.noAnnotations}>
+                            <CommentIcon style={{ fontSize: 48, opacity: 0.5 }} />
+                            <Typography variant="body1" style={{ marginTop: 16 }}>
+                                No comments yet
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                                Add comments to the document using the annotation tools
+                            </Typography>
+                        </div>
+                    )}
                 </div>
-                <Dialog open={ this.state.open } onClose={ this.addCommentText } aria-labelledby="form-dialog-title">
-                    <DialogTitle id="form-dialog-title">Add note</DialogTitle>
+
+                <Dialog open={this.state.open} onClose={() => this.setState({ open: false })}>
+                    <DialogTitle>Add Comment</DialogTitle>
                     <DialogContent>
                         <TextField
+                            autoFocus
                             margin="dense"
                             id="name"
-                            label="Note"
+                            label="Comment"
+                            type="text"
                             fullWidth
-                            variant="outlined"
+                            multiline
+                            rows={4}
                         />
                     </DialogContent>
                     <DialogActions>
+                        <Button onClick={() => this.setState({ open: false })} color="primary">
+                            Cancel
+                        </Button>
                         <Button onClick={this.addCommentText} color="primary">
-                            Submit
+                            Add
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -566,4 +670,4 @@ class CustomRHP extends Component {
     }
 }
 
-export default CustomRHP;
+export default withStyles(styles)(CustomRHP);

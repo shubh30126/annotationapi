@@ -66,4 +66,6 @@ node_modules/
 
 .idea/
 build/
+viewsdk/
+public/viewsdk/
 

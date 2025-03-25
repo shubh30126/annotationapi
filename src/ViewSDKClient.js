@@ -21,7 +21,10 @@ class ViewSDKClient {
                 });
             }
         });
-        this.adobeDCView = undefined;
+        this.adobeDCView = null;
+        this.adobeViewer = null;
+        this.annotationManager = null;
+        this.apis = null;
     }
 
     ready() {
@@ -32,40 +35,56 @@ class ViewSDKClient {
         /* Initialize the AdobeDC View object */
         this.adobeDCView = new window.AdobeDC.View({
             /* Pass your registered client id */
-            clientId: "47018cb0814b4f52a9375e312bcce230",
-            // clientId: "8c0cd670273d451cbc9b351b11d22318",
+            clientId: "8c0cd670273d451cbc9b351b11d22318",
             /* Pass the div id in which PDF should be rendered */
             divId,
         });
 
-        /* Invoke the file preview API on Adobe DC View object */
         const previewFilePromise = this.adobeDCView.previewFile({
-            /* Pass information on how to access the file */
             content: {
-                /* Location of file where it is hosted */
                 location: {
                     url: "https://documentcloud.adobe.com/view-sdk/PDFs/Benchmark.pdf",
-                    /*
-                    If the file URL requires some additional headers, then it can be passed as follows:-
-                    headers: [
-                        {
-                            key: "<HEADER_KEY>",
-                            value: "<HEADER_VALUE>",
-                        }
-                    ]
-                    */
                 },
             },
-            /* Pass meta data of file */
             metaData: {
-                /* file name */
                 fileName: "Bodea Brochure.pdf",
-                /* file ID */
                 id: "6d07d124-ac85-43b3-a867-36930f502ac6",
             }
-        }, viewerConfig);
+        }, {
+            ...viewerConfig,
+            enableSearchAPIs: true,
+            enableAnnotationAPIs: true,
+        });
 
-        return previewFilePromise;
+        return previewFilePromise.then(adobeViewer => {
+            this.adobeViewer = adobeViewer;
+            return this.adobeViewer.getAPIs().then(apis => {
+                this.apis = apis;
+                return this.adobeViewer.getAnnotationManager().then(annotManager => {
+                    this.annotationManager = annotManager;
+                    
+                    // Register annotation events immediately when annotation manager is ready
+                    if (this.annotationEventListener) {
+                        this.setupAnnotationEvents();
+                    }
+                    
+                    // Initialize all controls after we have the APIs
+                    this.addZoomControls();
+                    this.addPageNavigationControls();
+                    this.addSearchControls();
+                    
+                    // Get initial page info
+                    return this.getCurrentPage().then(currentPage => {
+                        return this.getTotalPages().then(totalPages => {
+                            if (viewerConfig.onPagesInfoUpdate) {
+                                viewerConfig.onPagesInfoUpdate(currentPage, totalPages);
+                            }
+                            return this.adobeViewer;
+                        });
+                    });
+                });
+            });
+        });
     }
 
     previewFileUsingFilePromise(divId, filePromise, fileName) {
@@ -132,6 +151,215 @@ class ViewSDKClient {
                 enablePDFAnalytics: true,
             }
         );
+    }
+
+    // Zoom controls
+    addZoomControls() {
+        this.zoomIn = () => {
+            if (this.apis) {
+                const zoomAPIs = this.apis.getZoomAPIs();
+                zoomAPIs.zoomIn();
+            }
+        };
+
+        this.zoomOut = () => {
+            if (this.apis) {
+                const zoomAPIs = this.apis.getZoomAPIs();
+                zoomAPIs.zoomOut();
+            }
+        };
+    }
+
+    // Page navigation controls
+    addPageNavigationControls() {
+        this.getCurrentPage = () => {
+            if (this.apis) {
+                return this.apis.getCurrentPage();
+            }
+            return Promise.resolve(1);
+        };
+
+        this.getTotalPages = () => {
+            if (this.apis) {
+                return this.apis.getPDFMetadata().then(metadata => metadata.numPages);
+            }
+            return Promise.resolve(1);
+        };
+
+        this.gotoPage = (pageNumber) => {
+            if (this.adobeViewer) {
+                return this.apis.gotoLocation(pageNumber);
+            }
+            return Promise.resolve();
+        };
+
+        this.nextPage = async () => {
+            if (!this.adobeViewer) return 1;
+            const currentPage = await this.getCurrentPage();
+            const totalPages = await this.getTotalPages();
+            
+            if (currentPage < totalPages) {
+                await this.gotoPage(currentPage + 1);
+                return currentPage + 1;
+            }
+            return currentPage;
+        };
+
+        this.previousPage = async () => {
+            if (!this.adobeViewer) return 1;
+            const currentPage = await this.getCurrentPage();
+            
+            if (currentPage > 1) {
+                await this.gotoPage(currentPage - 1);
+                return currentPage - 1;
+            }
+            return currentPage;
+        };
+    }
+
+    // Search controls
+    addSearchControls() {
+        this.search = async (searchText) => {
+            if (!this.apis) return null;
+            
+            try {
+                // Start the search and get search object
+                const searchObject = await this.apis.search(searchText);
+                let latestState = null;
+
+                // Create a promise to handle search results
+                return new Promise((resolve) => {
+                    // Register callback for search results updates
+                    searchObject.onResultsUpdate((searchResult) => {
+                        console.log('Search Result:', searchResult); // Debug log
+                        
+                        // Create current state
+                        latestState = {
+                            searchObject,
+                            totalMatches: searchResult.totalResults || 0,
+                            currentMatch: searchResult.currentResult ? searchResult.currentResult.index + 1 : 0,
+                            pageNumber: searchResult.currentResult ? searchResult.currentResult.pageNumber : null,
+                            status: searchResult.status,
+                            noResults: searchResult.totalResults === 0
+                        };
+
+                        // Always resolve with the latest state for immediate feedback
+                        resolve(latestState);
+                    });
+                });
+            } catch (error) {
+                console.error('Search error:', error);
+                return null;
+            }
+        };
+
+        this.nextMatch = async (searchObject) => {
+            if (!searchObject) return null;
+            try {
+                const result = await searchObject.next();
+                if (!result) return null;
+
+                return {
+                    searchObject,
+                    currentMatch: result.index + 1,
+                    pageNumber: result.pageNumber,
+                    totalMatches: searchObject.totalResults || 0,
+                    status: 'FOUND'
+                };
+            } catch (error) {
+                console.error('Next match error:', error);
+                return null;
+            }
+        };
+
+        this.previousMatch = async (searchObject) => {
+            if (!searchObject) return null;
+            try {
+                const result = await searchObject.previous();
+                if (!result) return null;
+
+                return {
+                    searchObject,
+                    currentMatch: result.index + 1,
+                    pageNumber: result.pageNumber,
+                    totalMatches: searchObject.totalResults || 0,
+                    status: 'FOUND'
+                };
+            } catch (error) {
+                console.error('Previous match error:', error);
+                return null;
+            }
+        };
+
+        this.clearSearch = async (searchObject) => {
+            if (!searchObject) return;
+            try {
+                await searchObject.clear();
+            } catch (error) {
+                console.error('Clear search error:', error);
+            }
+        };
+    }
+
+    getAnnotationManager() {
+        return this.annotationManager;
+    }
+
+    registerEventListener(eventListener) {
+        this.annotationEventListener = eventListener;
+        
+        // Setup events if annotation manager is already available
+        if (this.annotationManager) {
+            this.setupAnnotationEvents();
+        }
+    }
+
+    setupAnnotationEvents() {
+        // Clear any existing callbacks first to prevent duplicates
+        this.annotationManager.unregisterCallback('AnnotationModeStarted');
+        this.annotationManager.unregisterCallback('AnnotationModeEnded');
+        
+        // Register the callbacks
+        this.annotationManager.registerCallback('AnnotationModeStarted', (event) => {
+            console.log("Annotation mode started");
+            console.log("Selected tool:", event.tool);
+            
+            if (this.annotationEventListener) {
+                this.annotationEventListener('ANNOTATION_MODE_STARTED', event.tool);
+            }
+        });
+
+        this.annotationManager.registerCallback('AnnotationModeEnded', (event) => {
+            console.log("Annotation mode ended");
+            
+            if (this.annotationEventListener) {
+                this.annotationEventListener('ANNOTATION_MODE_ENDED', event);
+            }
+        });
+    }
+
+    // Add method to get APIs
+    getAPIs() {
+        return this.apis;
+    }
+
+    isReady() {
+        return !!(this.adobeViewer && this.annotationManager && this.apis);
+    }
+
+    startAnnotationMode(mode, options = {}) {
+        if (this.annotationManager) {
+            // End any existing annotation mode first
+            this.endAnnotationMode();
+            // Start the new annotation mode
+            return this.annotationManager.startAnnotationMode(mode, options);
+        }
+    }
+
+    endAnnotationMode() {
+        if (this.annotationManager) {
+            return this.annotationManager.endAnnotationMode();
+        }
     }
 }
 

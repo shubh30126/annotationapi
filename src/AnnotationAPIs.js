@@ -11,7 +11,23 @@ export const updateAnnotations = body => fetchCall({
     body,
 });
 
+export const startAnnotationMode = (mode) => {
+    // Convert mode to lowercase if not already
+    const lowerMode = mode.toLowerCase();
+    
+    // Valid annotation modes
+    const validModes = ['note', 'highlight', 'shape', 'underline', 'strikeout', 'freetext', 'eraser'];
+    
+    if (!validModes.includes(lowerMode)) {
+        throw new Error(`Invalid annotation mode: ${mode}. Valid modes are: ${validModes.join(', ')}`);
+    }
+    
+    // Return the validated lowercase mode
+    return lowerMode;
+};
+
 export default {
     getAnnotations,
     updateAnnotations,
+    startAnnotationMode,
 };

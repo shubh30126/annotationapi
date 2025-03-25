@@ -41,3 +41,132 @@
     color: white;
     background-color: #252525;
 }
+
+.App {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background-color: white;
+}
+
+.controls {
+    display: flex;
+    justify-content: center !important;
+    padding: 1rem;
+    background-color: #f5f5f5;
+    gap: 1.5rem;
+    position: relative;
+}
+
+.zoom-controls,
+.page-controls {
+    flex-shrink: 1;
+    white-space: nowrap;
+}
+
+.zoom-controls,
+.page-controls,
+.search-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.pdf-viewer {
+    flex-grow: 1;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #f0f0f0;
+}
+
+input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+input:focus {
+    border-color: #1976d2;
+}
+
+.controls button {
+    transition: all 0.2s ease;
+}
+
+.controls button:hover:not(:disabled) {
+    background-color: rgba(25, 118, 210, 0.04);
+}
+
+.controls button:active:not(:disabled) {
+    background-color: rgba(25, 118, 210, 0.12);
+}
+
+#pdf-div {
+    flex: 1 1;
+    display: flex;
+    overflow: hidden;
+    margin: 50px 80px;
+    border: 4px solid black;
+    background-color: white;
+    padding: 0;
+}
+
+#pdf-div iframe,
+#pdf-div > div {
+    flex: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+}
+
+.search-controls {
+    position: absolute !important;
+    right: 24px;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    max-width: 450px;
+}
+
+.search-controls input {
+    flex-grow: 1;
+    min-width: 300px;
+    max-width: 100%;
+    padding: 0.5rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.search-counter {
+    min-width: 80px;  /* Ensure minimum width for the counter */
+    text-align: center;
+    white-space: nowrap;
+    font-size: 14px;
+    color: #666;
+    padding: 0 0.5rem;
+    flex-shrink: 0;  /* Prevent the counter from shrinking */
+}
+
+.search-controls button {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-width: 80px;  /* Ensure minimum width for buttons */
+}

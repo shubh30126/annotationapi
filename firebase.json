@@ -8,8 +8,19 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "!(/viewsdk/**)",
         "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/viewsdk/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000"
+          }
+        ]
       }
     ]
   }
